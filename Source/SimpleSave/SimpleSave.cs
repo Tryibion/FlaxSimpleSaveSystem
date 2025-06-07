@@ -11,14 +11,6 @@ using FlaxEngine.Json;
 
 namespace SimpleSaveSystem;
 
-// default save is in root save folder.
-// each slot gets its own folder based on the slot name.
-// slot saves get saved in slot folder.
-// default save file will save all of the slot names for easier access if needed.
-//
-// Archive will mirror the structure and store the last successful save to revert to if save fails.
-// Check for if save exists. if it does not, check if it exists in the archive, if it does revert it.
-
 /// <summary>
 /// SimpleSave class.
 /// </summary>
