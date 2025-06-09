@@ -78,7 +78,7 @@ public static class SimpleSave
     public static event Action LoadFailed;
     
     /// <summary>
-    /// Fired when the Current Slot Name is Changed.
+    /// Fired when the Active Slot Name is Changed.
     /// </summary>
     public static event Action<string> ActiveSlotChanged;
 
