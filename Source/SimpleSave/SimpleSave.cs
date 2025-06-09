@@ -25,10 +25,13 @@ public static class SimpleSave
     private static string _rootSaveDirectoryPath;
     private static string _defaultSaveFilePath;
     private static string _archiveSaveDirectoryPath;
-    private static string _currentSlotName;
+    private static string _activeSlotName;
 
     private static bool _verboseLogging;
 
+    /// <summary>
+    /// The local path that the save data is stored at.
+    /// </summary>
     public static string LocalPath
     {
         get
@@ -77,9 +80,9 @@ public static class SimpleSave
     /// <summary>
     /// Fired when the Current Slot Name is Changed
     /// </summary>
-    public static event Action CurrenSlotChanged;
+    public static event Action ActiveSlotChanged;
 
-    public static void Initialize(SimpleSaveSettings settings)
+    internal static void Initialize(SimpleSaveSettings settings)
     {
         Initialize(settings.RootSaveFolderName, settings.DefaultFileName, settings.VerboseLogging, settings.UseHash, settings.UseEncryption, settings.Password);
     }
@@ -126,13 +129,20 @@ public static class SimpleSave
 
 #region Utility
 
+    /// <summary>
+    /// Get all the possible slot names. This is pulled from the folder names that exist in the save location.
+    /// </summary>
+    /// <returns>An array of slot names.</returns>
     public static string[] GetAllSlotNames()
     {
         var names = new List<string>();
         var subDirectories = Directory.GetDirectories(_rootSaveDirectoryPath);
         foreach (var directory in subDirectories)
         {
-            names.Add(Path.GetDirectoryName(directory));
+            var name = Path.GetFileName(directory);
+            if (name.Equals("Archive", StringComparison.Ordinal))
+                continue;
+            names.Add(name);
         }
         return names.ToArray();
     }
@@ -157,55 +167,92 @@ public static class SimpleSave
 
 #endregion
 
-#region Current Slot
+#region Active Slot
 
     /// <summary>
-    /// Get or Set the current slot
+    /// Get or Set the active slot name.
     /// </summary>
-    public static string CurrentSlot
+    public static string ActiveSlot
     {
-        get => _currentSlotName;
+        get => _activeSlotName;
         set
         {
-            _currentSlotName = value;
-            CurrenSlotChanged?.Invoke();
+            _activeSlotName = value;
+            ActiveSlotChanged?.Invoke();
         }
     }
 
-    public static void AddToCurrentSlotCache<T>(string fileName, string key, T value)
+    /// <summary>
+    /// Adds data to the active slot.
+    /// </summary>
+    /// <param name="fileName">The file name to store data in for the active slot.</param>
+    /// <param name="key">The data key.</param>
+    /// <param name="value">The data value.</param>
+    public static void AddToActiveSlotCache<T>(string fileName, string key, T value)
     {
-        AddToSlotCache(_currentSlotName, fileName, key, value);
+        AddToSlotCache(_activeSlotName, fileName, key, value);
     }
 
-    public static bool TryGetFromCurrentSlotCache<T>(string fileName, string key, out T value)
+    /// <summary>
+    /// Try to get the data from the active slot.
+    /// </summary>
+    /// <param name="fileName">The file name that stores data for the active slot.</param>
+    /// <param name="key">The data key.</param>
+    /// <param name="value">The data value.</param>
+    /// <typeparam name="T">The type of the value.</typeparam>
+    /// <returns>True if value is found.</returns>
+    public static bool TryGetFromActiveSlotCache<T>(string fileName, string key, out T value)
     {
-        return TryGetFromSlotCache(_currentSlotName, fileName, key, out value);
+        return TryGetFromSlotCache(_activeSlotName, fileName, key, out value);
     }
 
-    public static bool SaveCurrentSlot()
+    /// <summary>
+    /// Save the active slot.
+    /// </summary>
+    /// <returns>True if successful.</returns>
+    public static bool SaveActiveSlot()
     {
-        return SaveSlot(_currentSlotName);
+        return SaveSlot(_activeSlotName);
     }
 
-    public static bool SaveCurrentSlotFile(string fileName)
+    /// <summary>
+    /// Save a specific file in the active slot.
+    /// </summary>
+    /// <param name="fileName">The file name.</param>
+    /// <returns>True if successful.</returns>
+    public static bool SaveActiveSlotFile(string fileName)
     {
-        return SaveSlotFile(_currentSlotName, fileName);
+        return SaveSlotFile(_activeSlotName, fileName);
     }
 
-    public static bool LoadCurrentSlot()
+    /// <summary>
+    /// Loads the active slot.
+    /// </summary>
+    /// <returns>True if successful.</returns>
+    public static bool LoadActiveSlot()
     {
-        return LoadSlot(_currentSlotName);
+        return LoadSlot(_activeSlotName);
     }
 
-    public static bool LoadCurrentSlotFile(string fileName)
+    /// <summary>
+    /// Loads a specific file in the active slot.
+    /// </summary>
+    /// <param name="fileName">The file name.</param>
+    /// <returns>True if successful.</returns>
+    public static bool LoadActiveSlotFile(string fileName)
     {
-        return LoadSlotFile(_currentSlotName, fileName);
+        return LoadSlotFile(_activeSlotName, fileName);
     }
     
 #endregion
 
 #region Cache Methods
 
+    /// <summary>
+    /// Adds a value to the default cache.
+    /// </summary>
+    /// <param name="key">The key identifier.</param>
+    /// <param name="value">The value to add.</param>
     public static void AddToDefaultCache<T>(string key, T value)
     {
         var json = JsonSerializer.Serialize(value, typeof(T));
@@ -213,6 +260,12 @@ public static class SimpleSave
         LogInfo($"Key: {key}, Value: {value} added to default cache.");
     }
 
+    /// <summary>
+    /// Tries to get a value from the default cache.
+    /// </summary>
+    /// <param name="key">The key identifier.</param>
+    /// <param name="value">The value if found, otherwise default.</param>
+    /// <returns>True if successful.</returns>
     public static bool TryGetFromDefaultCache<T>(string key, out T value)
     {
         if (!_defaultSaveData.TryGetValue(key, out var jsonValue))
@@ -227,6 +280,13 @@ public static class SimpleSave
         return true;
     }
 
+    /// <summary>
+    /// Add a value to the slot cache. Creates and new slot and file if needed.
+    /// </summary>
+    /// <param name="slotName">The name of the slot.</param>
+    /// <param name="fileName">The name of the file.</param>
+    /// <param name="key">The key identifier.</param>
+    /// <param name="value">The value to set.</param>
     public static void AddToSlotCache<T>(string slotName, string fileName, string key, T value)
     {
         var json = JsonSerializer.Serialize(value, typeof(T));
@@ -245,6 +305,14 @@ public static class SimpleSave
         LogInfo($"Key: {key}, Value: {value} added to Slot: {slotName}, File: {fileName} cache.");
     }
     
+    /// <summary>
+    /// Tries to get a value from a slot cache.
+    /// </summary>
+    /// <param name="slotName">The slot name.</param>
+    /// <param name="fileName">The file name.</param>
+    /// <param name="key">The key identifier</param>
+    /// <param name="value">The value if found. Default otherwise.</param>
+    /// <returns>True if successfully found.</returns>
     public static bool TryGetFromSlotCache<T>(string slotName, string fileName, string key, out T value)
     {
         if (!_slotSaveData.TryGetValue(slotName, out var slotData))
@@ -284,6 +352,11 @@ public static class SimpleSave
             SaveFailed?.Invoke();
     }
 
+    /// <summary>
+    /// Save the default cache to disk.
+    /// </summary>
+    /// <param name="suppressEvents">Whether to suppress the save events.</param>
+    /// <returns>True if successful.</returns>
     public static bool SaveDefault(bool suppressEvents = false)
     {
         if (!Directory.Exists(_rootSaveDirectoryPath))
@@ -294,6 +367,10 @@ public static class SimpleSave
         return success;
     }
 
+    /// <summary>
+    /// Saves the default cache and all slot caches to disk.
+    /// </summary>
+    /// <returns>True if successful.</returns>
     public static bool SaveAll()
     {
         bool success = true;
@@ -305,6 +382,11 @@ public static class SimpleSave
         return success;
     }
 
+    /// <summary>
+    /// Save all of the slot caches to disk.
+    /// </summary>
+    /// <param name="suppressEvents">Whether to suppress the save events</param>
+    /// <returns>True if successful.</returns>
     public static bool SaveAllSlots(bool suppressEvents = false)
     {
         bool success = true;
@@ -317,6 +399,12 @@ public static class SimpleSave
         return success;
     }
 
+    /// <summary>
+    /// Save a specific slot cache to disk.
+    /// </summary>
+    /// <param name="slotName">The name of the slot to save.</param>
+    /// <param name="suppressEvents">Whether to suppress the save events.</param>
+    /// <returns>True if successful.</returns>
     public static bool SaveSlot(string slotName, bool suppressEvents = false)
     {
         bool success = true;
@@ -329,6 +417,13 @@ public static class SimpleSave
         return success;
     }
 
+    /// <summary>
+    /// Saves a specific file in a slot to disk.
+    /// </summary>
+    /// <param name="slotName">The slot name.</param>
+    /// <param name="fileName">The file name.</param>
+    /// <param name="suppressEvents">Whether to suppress the save events.</param>
+    /// <returns>True if successful.</returns>
     public static bool SaveSlotFile(string slotName, string fileName, bool suppressEvents = false)
     {
         var slotDirectoryPath = Path.Combine(_rootSaveDirectoryPath, slotName);
@@ -417,6 +512,10 @@ public static class SimpleSave
             LoadFailed?.Invoke();
     }
 
+    /// <summary>
+    /// Loads the default and all slots into cache from disk.
+    /// </summary>
+    /// <returns>True if successful.</returns>
     public static bool LoadAll()
     {
         bool success = true;
@@ -428,6 +527,11 @@ public static class SimpleSave
         return success;
     }
     
+    /// <summary>
+    /// Loads the default cache from disk.
+    /// </summary>
+    /// <param name="suppressEvents">Whether to suppress the load events.</param>
+    /// <returns>True if successful.</returns>
     public static bool LoadDefault(bool suppressEvents = false)
     {
         bool success = PerformLoad(_defaultSaveData, _defaultSaveFilePath);
@@ -435,6 +539,11 @@ public static class SimpleSave
         return success;
     }
 
+    /// <summary>
+    /// Loads all the slots into cache from disk.
+    /// </summary>
+    /// <param name="suppressEvents">Whether to suppress the load events.</param>
+    /// <returns>True if successful.</returns>
     public static bool LoadAllSlots(bool suppressEvents = false)
     {
         bool success = true;
@@ -450,6 +559,12 @@ public static class SimpleSave
         return success;
     }
 
+    /// <summary>
+    /// Loads a specific slot into cache from disk.
+    /// </summary>
+    /// <param name="slotName">The name of the slot.</param>
+    /// <param name="suppressEvents">Whether to suppress the load events.</param>
+    /// <returns>True if successful.</returns>
     public static bool LoadSlot(string slotName, bool suppressEvents = false)
     {
         bool success = true;
@@ -483,6 +598,13 @@ public static class SimpleSave
         return success;
     }
 
+    /// <summary>
+    /// Loads a specific file from a slot into cache from disk.
+    /// </summary>
+    /// <param name="slotName">The name of the slot.</param>
+    /// <param name="fileName">The name of the file.</param>
+    /// <param name="suppressEvents">Whether to suppress the load events.</param>
+    /// <returns>True if successful.</returns>
     public static bool LoadSlotFile(string slotName, string fileName, bool suppressEvents = false)
     {
         var slotFilePath = Path.Combine(_rootSaveDirectoryPath, slotName, $"{fileName}.save");
@@ -572,33 +694,52 @@ public static class SimpleSave
 
 #region Remove Methods
 
+    /// <summary>
+    /// Clears the data in the default and slot caches.
+    /// </summary>
     public static void ClearAllCache()
     {
         ClearDefaultCache();
         ClearAllSlotCache();
     }
 
+    /// <summary>
+    /// Clears the data from the default cache.
+    /// </summary>
     public static void ClearDefaultCache()
     {
         _defaultSaveData.Clear();
     }
 
+    /// <summary>
+    /// Clears the data from all the slot caches.
+    /// </summary>
     public static void ClearAllSlotCache()
     {
         _slotSaveData.Clear();
     }
-    
+
+    /// <summary>
+    /// Clears the data from a specific slot.
+    /// </summary>
+    /// <param name="slotName">The name of the slot.</param>
     public static void ClearSlotCache(string slotName)
     {
         _slotSaveData[slotName].Clear();
     }
 
+    /// <summary>
+    /// Removes the default and all the slots from disk.
+    /// </summary>
     public static void RemoveAll()
     {
         RemoveDefault();
         RemoveAllSlots();
     }
 
+    /// <summary>
+    /// Removes the default and default archive from disk.
+    /// </summary>
     public static void RemoveDefault()
     {
         if (File.Exists(_defaultSaveFilePath))
@@ -608,6 +749,9 @@ public static class SimpleSave
             File.Delete(Path.Combine(archiveFile));
     }
 
+    /// <summary>
+    /// Removes all the slots from disk.
+    /// </summary>
     public static void RemoveAllSlots()
     {
         var directories = Directory.GetDirectories(_rootSaveDirectoryPath);
@@ -617,6 +761,10 @@ public static class SimpleSave
         }
     }
 
+    /// <summary>
+    /// Removes a specific slot from disk.
+    /// </summary>
+    /// <param name="slotName">The specific slot to remove.</param>
     public static void RemoveSlot(string slotName)
     {
         if (string.IsNullOrEmpty(slotName))
@@ -630,6 +778,11 @@ public static class SimpleSave
             Directory.Delete(archivePath, true);
     }
 
+    /// <summary>
+    /// Remove a specific file from a slot from disk.
+    /// </summary>
+    /// <param name="slotName">The slot name.</param>
+    /// <param name="fileName">The file name.</param>
     public static void RemoveSlotFile(string slotName, string fileName)
     {
         if (string.IsNullOrEmpty(slotName) || string.IsNullOrEmpty(fileName))
