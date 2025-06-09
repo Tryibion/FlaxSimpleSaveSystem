@@ -65,22 +65,57 @@ public class SimpleSaveSettingsEditor : GenericEditor
 
     private void OnRemoveSlotButtonClicked()
     {
-        SimpleSave.RemoveSlot(_slotNameTextBox.Text);
+        string saveFolder = string.Empty;
+        if (Values[0] is SimpleSaveSettings settings)
+        {
+            saveFolder = settings.RootSaveFolderName;
+        }
+        var path = Path.Combine(SimpleSave.LocalPath, saveFolder, _slotNameTextBox.Text);
+        if (Directory.Exists(path))
+            Directory.Delete(path, true);
+        _slotNameTextBox.TextBox.Clear();
     }
 
     private void OnRemoveAllSlotsButtonClicked()
     {
-        SimpleSave.RemoveAllSlots();
+        string saveFolder = string.Empty;
+        if (Values[0] is SimpleSaveSettings settings)
+        {
+            saveFolder = settings.RootSaveFolderName;
+        }
+        var path = Path.Combine(SimpleSave.LocalPath, saveFolder);
+        if (Directory.Exists(path))
+        {
+            var subDirs = Directory.GetDirectories(path);
+            foreach (var subDir in subDirs)
+                Directory.Delete(subDir, true);
+        }
     }
 
     private void OnRemoveAllButtonClicked()
     {
-        SimpleSave.RemoveAll();
+        string saveFolder = string.Empty;
+        if (Values[0] is SimpleSaveSettings settings)
+        {
+            saveFolder = settings.RootSaveFolderName;
+        }
+        var path = Path.Combine(SimpleSave.LocalPath, saveFolder);
+        if (Directory.Exists(path))
+            Directory.Delete(path, true);
     }
     
     private void OnRemoveDefaultButtonClicked()
     {
-        SimpleSave.RemoveDefault();
+        string saveFolder = string.Empty;
+        string defaultName = string.Empty;
+        if (Values[0] is SimpleSaveSettings settings)
+        {
+            saveFolder = settings.RootSaveFolderName;
+            defaultName = settings.DefaultFileName;
+        }
+        var path = Path.Combine(SimpleSave.LocalPath, saveFolder, $"{defaultName}.save");
+        if (File.Exists(path))
+            File.Delete(path);
     }
 
     protected override void Deinitialize()

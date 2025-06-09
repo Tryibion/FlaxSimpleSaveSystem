@@ -31,9 +31,6 @@ public class SimpleSaveSystemEditor : EditorPlugin
             _jsonAsset = Content.LoadAsync<JsonAsset>(_settingsPath);
             GameSettings.SetCustomSettings("SimpleSaveSettings", _jsonAsset);
         }
-        
-        // Initialize with settings so that paths will be set and removes will work in custom editor.
-        SimpleSave.Initialize(_jsonAsset.GetInstance<SimpleSaveSettings>());
 
         _pluginButton = Editor.UI.MainMenu.GetButton("Plugins") ?? Editor.UI.MainMenu.AddButton("Plugins");
         _openButton = _pluginButton.ContextMenu.AddButton("Open Simple Save Settings", OpenSettings);
