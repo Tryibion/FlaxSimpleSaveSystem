@@ -22,12 +22,17 @@ public class SimpleSaveSettings : SettingsBase
     /// <summary>
     /// Whether to encrypt the save data.
     /// </summary>
-    public bool EncryptData = false;
+    public bool UseEncryption = false;
     
     /// <summary>
     /// The password used for encryption.
     /// </summary>
     public string Password = "password";
+    
+    /// <summary>
+    /// Whether to add and use a hash to check for file changes.
+    /// </summary>
+    public bool UseHash = true;
     
     /// <summary>
     /// Whether to use verbose logging. Automatically disabled in release builds.

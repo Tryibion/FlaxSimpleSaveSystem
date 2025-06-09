@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using FlaxEditor.Content.Settings;
 using FlaxEngine;
 using FlaxEngine.Json;
+using FlaxEngine.Utilities;
 
 namespace SimpleSaveSystem;
 
@@ -18,7 +19,8 @@ public static class SimpleSave
 {
     private static string _rootSaveFolderName;
     private static string _defaultSaveFileName;
-    private static bool _encryptData;
+    private static bool _useEncryption;
+    private static bool _useHash;
     private static string _encryptPassword;
     private static string _rootSaveDirectoryPath;
     private static string _defaultSaveFilePath;
@@ -79,10 +81,10 @@ public static class SimpleSave
 
     public static void Initialize(SimpleSaveSettings settings)
     {
-        Initialize(settings.RootSaveFolderName, settings.DefaultFileName, settings.VerboseLogging, settings.EncryptData, settings.Password);
+        Initialize(settings.RootSaveFolderName, settings.DefaultFileName, settings.VerboseLogging, settings.UseHash, settings.UseEncryption, settings.Password);
     }
 
-    internal static void Initialize(string rootSaveFolderName, string defaultSaveFileName, bool verboseLogging = false, bool encrypt = false, string password = null)
+    internal static void Initialize(string rootSaveFolderName, string defaultSaveFileName, bool verboseLogging = false, bool useHash = true, bool encrypt = false, string password = null)
     {
         _rootSaveFolderName = rootSaveFolderName;
         _rootSaveDirectoryPath = Path.Combine(LocalPath, _rootSaveFolderName);
@@ -94,7 +96,8 @@ public static class SimpleSave
         
         _defaultSaveFileName = defaultSaveFileName;
         _defaultSaveFilePath = Path.Combine(_rootSaveDirectoryPath, $"{_defaultSaveFileName}.save");
-        _encryptData = encrypt;
+        _useEncryption = encrypt;
+        _useHash = useHash;
         _encryptPassword = password;
 #if BUILD_RELEASE
         _verboseLogging = false;
@@ -132,6 +135,24 @@ public static class SimpleSave
             names.Add(Path.GetDirectoryName(directory));
         }
         return names.ToArray();
+    }
+
+    private static string ComputeHash(string data)
+    {
+        return ComputeHash(Encoding.UTF8.GetBytes(data));
+    }
+    
+    private static string ComputeHash(byte[] data)
+    {
+        using var sha256 = SHA256.Create();
+        var hash = sha256.ComputeHash(data);
+        return Encoding.UTF8.GetString(hash);
+    }
+
+    private static bool VerifyHash(byte[] data, string expectedHash)
+    {
+        var actualHash = ComputeHash(data);
+        return actualHash == expectedHash;
     }
 
 #endregion
@@ -340,17 +361,18 @@ public static class SimpleSave
             using (var outputStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read))
             {
                 // Write data to stream
-                writer.WriteLine(data.Count);
-                foreach (var e in data)
+                string saveData = JsonSerializer.Serialize(data);
+
+                if (_useHash)
                 {
-                    writer.Write(e.Key);
-                    writer.Write(":");
-                    writer.Write(e.Value);
+                    var hash = ComputeHash(saveData);
+                    saveData = saveData.Insert(0, $"{hash}\n");
                 }
+                writer.Write(saveData);
                 writer.Flush();
                 outputStream.Position = 0;
                 // Encrypt or copy data into file
-                if (_encryptData)
+                if (_useEncryption)
                     EncryptStream(inputStream, outputStream, _encryptPassword);
                 else
                 {
@@ -358,6 +380,7 @@ public static class SimpleSave
                     CopyStream(inputStream, outputStream);
                 }
             }
+            
             LogInfo($"Data saved to {filePath}");
             return true;
         }
@@ -509,25 +532,32 @@ public static class SimpleSave
             using (var reader = new StreamReader(outputStream, Encoding.UTF8))
             {
                 // Decrypt or copy data into file
-                if (_encryptData)
+                if (_useEncryption)
                     DecryptStream(inputStream, outputStream, _encryptPassword);
                 else
                 {
                     CopyStream(inputStream, outputStream);
                     outputStream.Position = 0;
                 }
-                
-                data.Clear();
-                int dataCount = Convert.ToInt32(reader.ReadLine());
-                for (int i = 0; i < dataCount; i++)
+
+                var saveData = reader.ReadToEnd();
+                if (_useHash)
                 {
-                    var line = reader.ReadLine();
-                    var separatorIndex= line.IndexOf(':', StringComparison.Ordinal);
-                    var key = line.Substring(0, separatorIndex);
-                    var value = line.Substring(separatorIndex + 1);
-                    data.Add(key, value);
+                    var endOfHashIndex = saveData.IndexOf('\n');
+                    var hash = saveData.Substring(0, endOfHashIndex);
+                    saveData = saveData.Substring(endOfHashIndex + 1);
+                    var match = VerifyHash(Encoding.UTF8.GetBytes(saveData), hash);
+                    if (!match)
+                    {
+                        throw new Exception("Hash verification failed on loaded save.");
+                    }
                 }
+
+                var desData = JsonSerializer.Deserialize<Dictionary<string, string>>(saveData);
+                data.Clear();
+                data.AddRange(desData);
             }
+            
             LogInfo($"Data loaded from {filePath}");
             return true;
         }
@@ -641,25 +671,13 @@ public static class SimpleSave
     private const int IvSize = 16;
     private const int Iterations = 100;
     private const int BufferSize = 2048;
-
-    /// <summary>
-    /// Encrypt a string.
-    /// </summary>
-    /// <param name="text">The string to encrypt.</param>
-    /// <param name="password">The password to use for encryption.</param>
-    /// <returns>The encrypted string.</returns>
+    
     private static string EncryptString(string text, string password)
     {
         byte[] encrypted = EncryptBytes(Encoding.UTF8.GetBytes(text), password);
         return Encoding.UTF8.GetString(encrypted);
     }
-
-    /// <summary>
-    /// Decrypt a string.
-    /// </summary>
-    /// <param name="text">The string to decrypt.</param>
-    /// <param name="password">The password to use for decryption.</param>
-    /// <returns>The decrypted string.</returns>
+    
     private static string DecryptString(string text, string password)
     {
         byte[] bytes = Encoding.UTF8.GetBytes(text);
