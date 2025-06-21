@@ -56,7 +56,7 @@ public static class SimpleSave
     private static Dictionary<string, Dictionary<string, Dictionary<string, string>>> _slotSaveData;
 
     private static CancellationTokenSource _cancellationToken;
-    
+
     /// <summary>
     /// This fires when anything is saved.
     /// </summary>
@@ -71,7 +71,7 @@ public static class SimpleSave
     /// This fires when anything is loaded.
     /// </summary>
     public static event Action Loaded;
-    
+
     /// <summary>
     /// This fires when a load fails.
     /// </summary>
