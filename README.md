@@ -1,7 +1,7 @@
 # Simple Save System for the Flax Engine
 This is a simple to use save system for the Flax Game Engine that includes save slots, encryption, hashing, and data caching. This is implemented in C# and is not by default exposed to C++.
 
-Enjoy this plugin. If you want to donate, here is a link to donate on [ko-fi](https://ko-fi.com/tryibion).
+Enjoy this plugin? Here is a link to donate on [ko-fi](https://ko-fi.com/tryibion).
 
 ## Installation
 To add this plugin project to your game, follow the instructions in the [Flax Engine documentation](https://docs.flaxengine.com/manual/scripting/plugins/plugin-project.html) for adding a plugin project automatically using git or manually.
