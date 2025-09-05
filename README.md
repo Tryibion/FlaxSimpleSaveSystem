@@ -9,7 +9,7 @@ To add this plugin project to your game, follow the instructions in the [Flax En
 ## Usage
 The goal of this plugin is to be a simple and straight forward to use save system.
 
-The save location is the same as where the Flax Engine stores logs during runtime which is the local folder on each platform. Ex. Windows: C:\Users\[YourUsername]\AppData\Local\[Company Name]\[Game Name]\[Save folder name set in `SimpleSaveSettings`]. There is a button to open this location in the `SimpleSaveSettings` to get to the location quickly.
+The save location is the same as where the Flax Engine stores logs during runtime which is the local folder on each platform. Ex. Windows: C:\Users\\[YourUsername]\AppData\Local\\[Company Name]\\[Game Name]\\[Save folder name set in `SimpleSaveSettings`]. There is a button to open this location in the `SimpleSaveSettings` to get to the location quickly.
 
 The majority of the save system is in the `SimpleSave` static class. The save data is broken up between two parts. One is the default cache and the other are save slots.
 
