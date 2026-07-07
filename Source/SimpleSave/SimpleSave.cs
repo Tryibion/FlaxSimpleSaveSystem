@@ -628,6 +628,7 @@ public static class SimpleSave
 
     private static bool PerformLoad(Dictionary<string, string> data, string filePath)
     {
+        if (filePath.EndsWith(".save.save")) filePath = filePath.Substring(0, filePath.Length - ".save".Length);
         if (!File.Exists(filePath))
         {
             LogWarning($"Missing save file at path {filePath}. Checking archive for file.");
