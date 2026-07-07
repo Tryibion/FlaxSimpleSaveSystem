@@ -98,9 +98,8 @@ public static class SimpleSave
             Directory.CreateDirectory(_archiveSaveDirectoryPath);
         
         _defaultSaveFileName = defaultSaveFileName;
-        _defaultSaveFilePath = Path.Combine(_rootSaveDirectoryPath, $"{_defaultSaveFileName}.save");
-        if (_defaultSaveFilePath.EndsWith(".save.save"))
-            _defaultSaveFilePath = _defaultSaveFilePath.Substring(0, _defaultSaveFilePath.Length - ".save".Length);
+        string fileNameWithExtension = _defaultSaveFileName.EndsWith(".save") ? _defaultSaveFileName : $"{_defaultSaveFileName}.save";
+        _defaultSaveFilePath = Path.Combine(_rootSaveDirectoryPath, fileNameWithExtension);
         _useEncryption = encrypt;
         _useHash = useHash;
         _encryptPassword = password;
