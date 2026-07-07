@@ -98,7 +98,7 @@ public static class SimpleSave
             Directory.CreateDirectory(_archiveSaveDirectoryPath);
         
         _defaultSaveFileName = defaultSaveFileName;
-        _defaultSaveFilePath = Path.Combine(_rootSaveDirectoryPath, $"{_defaultSaveFileName}.save");
+        _defaultSaveFilePath = Path.Combine(_rootSaveDirectoryPath, $"{_defaultSaveFileName}{(_defaultSaveFileName.EndsWith(".save") ? "" : ".save")}");
         _useEncryption = encrypt;
         _useHash = useHash;
         _encryptPassword = password;
@@ -430,7 +430,7 @@ public static class SimpleSave
         if (!Directory.Exists(slotDirectoryPath))
             Directory.CreateDirectory(slotDirectoryPath);
         
-        bool success = PerformSave(_slotSaveData[slotName][fileName], Path.Combine(slotDirectoryPath, $"{fileName}.save"));
+        bool success = PerformSave(_slotSaveData[slotName][fileName], Path.Combine(slotDirectoryPath, $"{fileName}{(fileName.EndsWith(".save") ? "" : ".save")}"));
         CallSaveEvents(success, suppressEvents);
         return success;
     }
@@ -607,7 +607,7 @@ public static class SimpleSave
     /// <returns>True if successful.</returns>
     public static bool LoadSlotFile(string slotName, string fileName, bool suppressEvents = false)
     {
-        var slotFilePath = Path.Combine(_rootSaveDirectoryPath, slotName, $"{fileName}.save");
+        var slotFilePath = Path.Combine(_rootSaveDirectoryPath, slotName, $"{fileName}{(fileName.EndsWith(".save") ? "" : ".save")}");
 
         // Create new cache values if they don't exist.
         if (!_slotSaveData.TryGetValue(slotName, out var slotData))
@@ -788,7 +788,7 @@ public static class SimpleSave
         if (string.IsNullOrEmpty(slotName) || string.IsNullOrEmpty(fileName))
             return;
         
-        var slotFilePath = Path.Combine(_rootSaveDirectoryPath, slotName, $"{fileName}.save");
+        var slotFilePath = Path.Combine(_rootSaveDirectoryPath, slotName, $"{fileName}{(fileName.EndsWith(".save") ? "" : ".save")}");
         if (File.Exists(slotFilePath))
             File.Delete(slotFilePath);
         var archiveFile = Path.Combine(_archiveSaveDirectoryPath, slotName, $"{fileName}.bkp");
