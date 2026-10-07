@@ -10,6 +10,7 @@ Source/*.Gen.*
 # Ignore Visual Studio project files (generated locally)
 *.csproj
 *.sln
+*.slnx
 launchSettings.json
 
 # Ignore Visual Code project files (generated locally)
